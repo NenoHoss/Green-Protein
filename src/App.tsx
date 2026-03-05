@@ -9,6 +9,7 @@ import {
   CheckCircle2, 
   Info,
   Beaker,
+  Bot,
   Table as TableIcon,
   LayoutDashboard,
   Search,
@@ -50,9 +51,7 @@ import {
   CalculationResult,
   FAO_2013_ADULT_STANDARD
 } from './types';
-import { calculateBlendAnalysis, calculateProduction } from './utils';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { calculateBlendAnalysis, calculateProduction, cn } from './utils';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -80,16 +79,14 @@ function FeatureCard({ title, desc, btnText, icon, onClick }: { title: string, d
   );
 }
 
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
-
 import { Methodology } from './components/Methodology';
 import { EconomicAnalysis } from './components/EconomicAnalysis';
+import { ChatAssistant } from './components/ChatAssistant';
+import { AminoAcidComparison } from './components/AminoAcidComparison';
 import { translations, Language } from './translations';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'home' | 'production' | 'research' | 'methodology' | 'economic'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'production' | 'research' | 'methodology' | 'economic' | 'ai-assistant'>('home');
   const [language, setLanguage] = useState<Language>('en');
   const [showDisclaimers, setShowDisclaimers] = useState(false);
   
@@ -106,6 +103,7 @@ export default function App() {
   // Research State
   const [selectedLeafId, setSelectedLeafId] = useState<string>(LEAF_SOURCES[0].id);
   const [searchQuery, setSearchQuery] = useState("");
+  const [researchViewMode, setResearchViewMode] = useState<'standard' | 'comparison'>('standard');
   const [customRatio, setCustomRatio] = useState<number>(0.55);
 
   const selectedLeaf = useMemo(() => LEAF_TYPES.find(l => l.id === leafId)!, [leafId]);
@@ -143,14 +141,23 @@ export default function App() {
   const filteredBlends = useMemo(() => {
     return allBlends.filter(blend => {
       const matchLeaf = blend.leaf.id === selectedLeafId;
-      const matchSearch = blend.complement.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchSearch = (blend.complement.nameEn.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                           (blend.complement.nameAr?.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                           (blend.complement.nameFr?.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                           (blend.complement.nameIt?.toLowerCase().includes(searchQuery.toLowerCase())));
       return matchLeaf && matchSearch;
     });
   }, [allBlends, selectedLeafId, searchQuery]);
 
   const exportToPDF = (blend: BlendAnalysis) => {
     const doc = new jsPDF();
-    const title = `Amino Balance Analysis: ${blend.leaf.name} + ${blend.complement.name}`;
+    const title = `Amino Balance Analysis: ${language === 'ar' ? blend.leaf.nameAr : 
+                                            language === 'fr' ? blend.leaf.nameFr :
+                                            language === 'it' ? blend.leaf.nameIt :
+                                            blend.leaf.nameEn} + ${language === 'ar' ? blend.complement.nameAr :
+                                            language === 'fr' ? blend.complement.nameFr :
+                                            language === 'it' ? blend.complement.nameIt :
+                                            blend.complement.nameEn}`;
     doc.setFontSize(18);
     doc.text(title, 14, 22);
     doc.setFontSize(10);
@@ -180,39 +187,44 @@ export default function App() {
     doc.text(`Completeness Level: ${blend.completeness}`, 14, finalY + 24);
     const splitText = doc.splitTextToSize(`Interpretation: ${blend.interpretation}`, 180);
     doc.text(splitText, 14, finalY + 34);
-    doc.save(`${blend.leaf.name}_${blend.complement.name}_Analysis.pdf`);
+    doc.save(`${blend.leaf.nameEn}_${blend.complement.nameEn}_Analysis.pdf`);
   };
 
   return (
-    <div className="min-h-screen bg-[#FDFCF8] text-stone-800 font-sans selection:bg-emerald-100 relative overflow-x-hidden">
+    <div className="min-h-screen text-stone-800 font-sans selection:bg-emerald-100 relative overflow-x-hidden">
       {/* Grain Overlay */}
       <div className="fixed inset-0 pointer-events-none bg-grain z-50" />
       
       {/* Header */}
-      <header className="border-b border-stone-200/60 bg-white/70 backdrop-blur-xl sticky top-0 z-50">
+      <header className="border-b border-stone-200/40 bg-white/60 backdrop-blur-2xl sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-10">
+          <div className="flex items-center gap-12">
             <div className="flex items-center gap-4 group cursor-pointer" onClick={() => setActiveTab('home')}>
               <motion.div 
-                whileHover={{ rotate: 15, scale: 1.1 }}
-                className="w-12 h-12 bg-emerald-900 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-emerald-900/20 transition-all"
+                whileHover={{ rotate: 5, scale: 1.05 }}
+                className="w-12 h-12 bg-emerald-900 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-emerald-900/20 transition-all duration-500"
               >
                 <Sprout size={26} />
               </motion.div>
               <div>
-                <h1 className="text-2xl font-display font-bold tracking-tight text-stone-900">{t.common.appTitle}</h1>
+                <h1 className="text-2xl font-display font-bold tracking-tight text-stone-900 group-hover:text-emerald-900 transition-colors">{t.common.appTitle}</h1>
               </div>
             </div>
 
             {/* Language Selector */}
-            <div className="flex items-center gap-1 bg-stone-100 p-1 rounded-xl">
+            <div className="hidden lg:flex items-center gap-1 bg-stone-100/50 p-1 rounded-xl border border-stone-200/50">
+              <div className="px-2 text-stone-400">
+                <Globe size={14} />
+              </div>
               {(['en', 'ar', 'fr', 'it'] as const).map((lang) => (
                 <button
                   key={lang}
                   onClick={() => setLanguage(lang)}
                   className={cn(
-                    "px-3 py-1.5 text-[10px] font-bold uppercase rounded-lg transition-all",
-                    language === lang ? "bg-white text-emerald-700 shadow-sm" : "text-stone-400 hover:text-stone-600"
+                    "px-4 py-1.5 text-[10px] font-bold uppercase rounded-lg transition-all duration-300",
+                    language === lang 
+                      ? "bg-white text-emerald-700 shadow-sm ring-1 ring-stone-200/50" 
+                      : "text-stone-400 hover:text-stone-600 hover:bg-stone-200/30"
                   )}
                 >
                   {lang}
@@ -220,17 +232,19 @@ export default function App() {
               ))}
             </div>
           </div>
-          
-          <nav className="hidden md:flex items-center gap-8">
-            <button onClick={() => setActiveTab('home')} className={cn("text-sm font-medium transition-colors", activeTab === 'home' ? "text-emerald-700" : "text-stone-600 hover:text-emerald-600")}>{t.nav.home}</button>
-            <button onClick={() => setActiveTab('research')} className={cn("text-sm font-medium transition-colors", activeTab === 'research' ? "text-emerald-700" : "text-stone-600 hover:text-emerald-600")}>{t.nav.research}</button>
-            <button onClick={() => setActiveTab('production')} className={cn("text-sm font-medium transition-colors", activeTab === 'production' ? "text-emerald-700" : "text-stone-600 hover:text-emerald-600")}>{t.nav.production}</button>
-            <button onClick={() => setActiveTab('methodology')} className={cn("text-sm font-medium transition-colors", activeTab === 'methodology' ? "text-emerald-700" : "text-stone-600 hover:text-emerald-600")}>{t.nav.methodology}</button>
-            <button onClick={() => setActiveTab('economic')} className={cn("text-sm font-medium transition-colors", activeTab === 'economic' ? "text-emerald-700" : "text-stone-600 hover:text-emerald-600")}>{t.nav.economic}</button>
+                    <nav className="hidden md:flex items-center gap-10">
+            <div className="flex items-center gap-8">
+              <button onClick={() => setActiveTab('home')} className={cn("text-sm font-semibold transition-all duration-300 hover:scale-105", activeTab === 'home' ? "text-emerald-700" : "text-stone-500 hover:text-emerald-600")}>{t.nav.home}</button>
+              <button onClick={() => setActiveTab('production')} className={cn("text-sm font-semibold transition-all duration-300 hover:scale-105", activeTab === 'production' ? "text-emerald-700" : "text-stone-500 hover:text-emerald-600")}>{t.nav.production}</button>
+              <button onClick={() => setActiveTab('research')} className={cn("text-sm font-semibold transition-all duration-300 hover:scale-105", activeTab === 'research' ? "text-emerald-700" : "text-stone-500 hover:text-emerald-600")}>{t.nav.research}</button>
+              <button onClick={() => setActiveTab('methodology')} className={cn("text-sm font-semibold transition-all duration-300 hover:scale-105", activeTab === 'methodology' ? "text-emerald-700" : "text-stone-500 hover:text-emerald-600")}>{t.nav.methodology}</button>
+              <button onClick={() => setActiveTab('economic')} className={cn("text-sm font-semibold transition-all duration-300 hover:scale-105", activeTab === 'economic' ? "text-emerald-700" : "text-stone-500 hover:text-emerald-600")}>{t.nav.economic}</button>
+              <button onClick={() => setActiveTab('ai-assistant')} className={cn("text-sm font-semibold transition-all duration-300 hover:scale-105", activeTab === 'ai-assistant' ? "text-emerald-700" : "text-stone-500 hover:text-emerald-600")}>{t.nav.aiAssistant}</button>
+            </div>
             
             <button 
               onClick={() => setActiveTab('production')}
-              className="px-6 py-2.5 bg-emerald-900 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-900/20 hover:bg-emerald-950 transition-all uppercase tracking-widest"
+              className="px-6 py-2.5 bg-emerald-900 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-900/20 hover:bg-emerald-950 hover:shadow-emerald-900/40 transition-all duration-300 active:scale-95 uppercase tracking-widest"
             >
               {t.nav.getStarted}
             </button>
@@ -238,7 +252,7 @@ export default function App() {
         </div>
       </header>
 
-      <main className={cn(activeTab === 'home' ? "" : "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12")}>
+      <main className={cn(activeTab === 'home' ? "" : "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16")}>
         <AnimatePresence mode="wait">
           {activeTab === 'home' ? (
             <motion.div
@@ -281,12 +295,12 @@ export default function App() {
                       language === 'ar' ? "text-6xl md:text-8xl" : "text-5xl md:text-7xl"
                     )}
                   >
-                    {t.home.heroTitle.split('leaves waste').map((part, i, arr) => (
+                    {t.home.heroTitle.split(t.home.heroTitleHighlight).map((part, i, arr) => (
                       <React.Fragment key={i}>
                         {part}
                         {i < arr.length - 1 && (
                           <span className="text-emerald-600 relative">
-                            {language === 'ar' ? 'مخلفات أوراقك' : 'leaves waste'}
+                            {t.home.heroTitleHighlight}
                             <svg className="absolute -bottom-4 left-0 w-full h-4 text-emerald-100 -z-10" viewBox="0 0 100 10" preserveAspectRatio="none">
                               <path d="M0 5 Q 25 0, 50 5 T 100 5" stroke="currentColor" strokeWidth="8" fill="none" />
                             </svg>
@@ -361,6 +375,13 @@ export default function App() {
                     icon={<DollarSign size={24} />}
                     onClick={() => setActiveTab('economic')}
                   />
+                  <FeatureCard 
+                    title={t.home.features.aiAssistant.title}
+                    desc={t.home.features.aiAssistant.desc}
+                    btnText={t.nav.aiAssistant}
+                    icon={<Bot size={24} />}
+                    onClick={() => setActiveTab('ai-assistant')}
+                  />
                 </div>
               </section>
 
@@ -418,12 +439,12 @@ export default function App() {
                       <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600">
                         <FlaskConical size={20} />
                       </div>
-                      <h2 className="text-xl font-display font-bold text-stone-900">Parameters</h2>
+                      <h2 className="text-xl font-display font-bold text-stone-900">{t.common.parameters}</h2>
                     </div>
 
                     <div className="space-y-8">
                       <div className="space-y-3">
-                        <label className="text-[10px] font-bold text-stone-400 uppercase tracking-[0.15em]">Tree Leaf Type</label>
+                        <label className="text-[10px] font-bold text-stone-400 uppercase tracking-[0.15em]">{t.common.treeLeafType}</label>
                         <select 
                           value={leafId}
                           onChange={(e) => {
@@ -439,7 +460,7 @@ export default function App() {
                       </div>
 
                       <div className="space-y-3">
-                        <label className="text-[10px] font-bold text-stone-400 uppercase tracking-[0.15em]">Leaf Quantity (Grams)</label>
+                        <label className="text-[10px] font-bold text-stone-400 uppercase tracking-[0.15em]">{t.common.leafQuantityGrams}</label>
                         <div className="relative">
                           <input 
                             type="number"
@@ -453,7 +474,7 @@ export default function App() {
 
                       <div className="pt-6 border-t border-stone-100">
                         <div className="space-y-3">
-                          <label className="text-[10px] font-bold text-stone-400 uppercase tracking-[0.15em]">Complementary Mix</label>
+                          <label className="text-[10px] font-bold text-stone-400 uppercase tracking-[0.15em]">{t.common.complementaryMix}</label>
                           <select 
                             value={mixIndex}
                             onChange={(e) => setMixIndex(Number(e.target.value))}
@@ -466,11 +487,12 @@ export default function App() {
                         </div>
                       </div>
 
-                      <button 
-                        onClick={handleCalculate}
-                        disabled={isCalculating}
-                        className="w-full bg-emerald-900 hover:bg-emerald-950 disabled:bg-stone-200 text-white font-display font-bold py-5 rounded-2xl shadow-xl shadow-emerald-900/20 transition-all flex items-center justify-center gap-3 group active:scale-[0.98]"
-                      >
+                      <div className="space-y-4">
+                        <button 
+                          onClick={handleCalculate}
+                          disabled={isCalculating}
+                          className="w-full bg-emerald-900 hover:bg-emerald-950 disabled:bg-stone-200 text-white font-display font-bold py-5 rounded-2xl shadow-xl shadow-emerald-900/20 hover:shadow-emerald-900/40 transition-all duration-300 flex items-center justify-center gap-3 group active:scale-[0.98]"
+                        >
                         {isCalculating ? (
                           <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }}>
                             <FlaskConical size={20} />
@@ -478,14 +500,15 @@ export default function App() {
                         ) : (
                           <>
                             <Zap size={20} className="text-emerald-400" />
-                            <span>Optimize Production</span>
+                            <span>{t.common.optimizeProduction}</span>
                             <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform opacity-50" />
                           </>
                         )}
                       </button>
                     </div>
                   </div>
-                </section>
+                </div>
+              </section>
               </div>
 
               {/* Results Section */}
@@ -509,13 +532,12 @@ export default function App() {
                               <Leaf size={20} />
                             </div>
                             <div>
-                              <h3 className="text-sm font-bold text-stone-900">Leaf Protein Analysis</h3>
-                              <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">تحليل بروتين الورق</p>
+                              <h3 className="text-sm font-bold text-stone-900">{t.common.leafProteinAnalysis}</h3>
                             </div>
                           </div>
                           <div className="space-y-4">
                             <div className="flex justify-between items-end">
-                              <span className="text-xs text-stone-500">Pure Protein (صافي بروتين)</span>
+                              <span className="text-xs text-stone-500">{t.common.pureProtein}</span>
                               <span className="text-xl font-bold text-stone-900">{prodResult.leafPureProteinG.toFixed(1)}g</span>
                             </div>
                             <div className="w-full bg-stone-100 h-1.5 rounded-full overflow-hidden">
@@ -537,13 +559,12 @@ export default function App() {
                               <Zap size={20} />
                             </div>
                             <div>
-                              <h3 className="text-sm font-bold text-stone-900">Source Protein Analysis</h3>
-                              <p className="text-[10px] font-bold text-amber-600 uppercase tracking-widest">تحليل بروتين المصدر</p>
+                              <h3 className="text-sm font-bold text-stone-900">{t.common.sourceProteinAnalysis}</h3>
                             </div>
                           </div>
                           <div className="space-y-4">
                             <div className="flex justify-between items-end">
-                              <span className="text-xs text-stone-500">Pure Protein (صافي بروتين)</span>
+                              <span className="text-xs text-stone-500">{t.common.pureProtein}</span>
                               <span className="text-xl font-bold text-stone-900">{prodResult.sourcePureProteinG.toFixed(1)}g</span>
                             </div>
                             <div className="w-full bg-stone-100 h-1.5 rounded-full overflow-hidden">
@@ -566,9 +587,8 @@ export default function App() {
                           className="bg-emerald-900 text-white p-7 rounded-[2rem] shadow-2xl shadow-emerald-900/20 relative overflow-hidden"
                         >
                           <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -mr-10 -mt-10" />
-                          <p className="text-[10px] font-bold text-emerald-300 uppercase tracking-[0.2em] mb-2">Total Pure Protein</p>
+                          <p className="text-[10px] font-bold text-emerald-300 uppercase tracking-[0.2em] mb-2">{t.common.totalPureProtein}</p>
                           <h3 className="text-3xl font-display font-bold">{prodResult.totalProteinGrams.toFixed(1)}g</h3>
-                          <p className="text-[10px] text-emerald-100/60 mt-3 font-medium">إجمالي البروتين الصافي</p>
                         </motion.div>
                         <motion.div 
                           initial={{ opacity: 0, y: 10 }}
@@ -576,9 +596,8 @@ export default function App() {
                           transition={{ delay: 0.2 }}
                           className="bg-white p-7 rounded-[2rem] border border-stone-200/60 shadow-xl shadow-stone-200/10"
                         >
-                          <p className="text-[10px] font-bold text-stone-400 uppercase tracking-[0.15em] mb-2">Leaf Concentrate</p>
+                          <p className="text-[10px] font-bold text-stone-400 uppercase tracking-[0.15em] mb-2">{t.lab.leafConcentrate}</p>
                           <h3 className="text-2xl font-display font-bold text-stone-900">{prodResult.leafConcentrateG.toFixed(1)}g</h3>
-                          <p className="text-[10px] text-stone-500 mt-3">مركز بروتين الورق</p>
                         </motion.div>
                         <motion.div 
                           initial={{ opacity: 0, y: 10 }}
@@ -586,9 +605,8 @@ export default function App() {
                           transition={{ delay: 0.3 }}
                           className="bg-white p-7 rounded-[2rem] border border-stone-200/60 shadow-xl shadow-stone-200/10"
                         >
-                          <p className="text-[10px] font-bold text-stone-400 uppercase tracking-[0.15em] mb-2">Legume Concentrate</p>
+                          <p className="text-[10px] font-bold text-stone-400 uppercase tracking-[0.15em] mb-2">{t.lab.legumeConcentrate}</p>
                           <h3 className="text-2xl font-display font-bold text-stone-900">{prodResult.sourceConcentrateG.toFixed(1)}g</h3>
-                          <p className="text-[10px] text-stone-500 mt-3">مركز بروتين البقوليات</p>
                         </motion.div>
                         <motion.div 
                           initial={{ opacity: 0, y: 10 }}
@@ -596,9 +614,9 @@ export default function App() {
                           transition={{ delay: 0.4 }}
                           className="bg-white p-7 rounded-[2rem] border border-stone-200/60 shadow-xl shadow-stone-200/10"
                         >
-                          <p className="text-[10px] font-bold text-stone-400 uppercase tracking-[0.15em] mb-2">Blend Ratio</p>
+                          <p className="text-[10px] font-bold text-stone-400 uppercase tracking-[0.15em] mb-2">{t.lab.blendRatio}</p>
                           <h3 className="text-2xl font-display font-bold text-emerald-600">{selectedLeaf.mixes[mixIndex].leafRatioPercent}:{selectedLeaf.mixes[mixIndex].sourceRatioPercent}</h3>
-                          <p className="text-[10px] text-stone-500 mt-3">نسبة الدمج (ورق:بقوليات)</p>
+                          <p className="text-[10px] text-stone-500 mt-3">{language === 'ar' ? "نسبة الدمج (ورق:بقوليات)" : t.lab.blendRatio}</p>
                         </motion.div>
                       </div>
 
@@ -608,8 +626,12 @@ export default function App() {
                             <Scale size={20} />
                           </div>
                           <div>
-                            <h4 className="text-sm font-bold text-amber-900">Legume Requirement</h4>
-                            <p className="text-xs text-amber-700">You need <span className="font-bold">{selectedLeaf.mixes[mixIndex].sourceWeightG * (quantity / selectedLeaf.leafWeightG)}g</span> of {prodResult.mixSource.split('/')[0]} to achieve this blend.</p>
+                            <h4 className="text-sm font-bold text-amber-900">{t.lab.legumeRequirement}</h4>
+                            <p className="text-xs text-amber-700">
+                              {t.lab.needText
+                                .replace('{amount}', (selectedLeaf.mixes[mixIndex].sourceWeightG * (quantity / selectedLeaf.leafWeightG)).toFixed(0))
+                                .replace('{source}', prodResult.mixSource.split('/')[0].trim())}
+                            </p>
                           </div>
                         </div>
                         <div className="h-12 w-px bg-amber-200 hidden md:block" />
@@ -618,8 +640,10 @@ export default function App() {
                             <TrendingUp size={20} />
                           </div>
                           <div>
-                            <h4 className="text-sm font-bold text-emerald-900">Max Daily Intake</h4>
-                            <p className="text-xs text-emerald-700">Recommended limit: <span className="font-bold">{prodResult.maxDailyConcentrateG.toFixed(1)}g</span> of final concentrate.</p>
+                            <h4 className="text-sm font-bold text-emerald-900">{t.lab.maxDailyIntake}</h4>
+                            <p className="text-xs text-emerald-700">
+                              {t.lab.recommendedLimit.replace('{amount}', prodResult.maxDailyConcentrateG.toFixed(1))}
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -628,23 +652,34 @@ export default function App() {
                       <div className="bg-white p-8 rounded-3xl border border-stone-200 shadow-sm">
                         <div className="flex items-center gap-2 mb-6">
                           <AlertCircle className="text-emerald-600" size={20} />
-                          <h2 className="text-lg font-semibold">Preparation Protocol (طريقة التحضير)</h2>
+                          <h2 className="text-lg font-semibold">{t.lab.prepProtocol}</h2>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                           <div className="space-y-3">
-                            {prodResult.prepNotes.split(',').map((step, i) => (
-                              <div key={i} className="flex items-start gap-3 p-3 bg-stone-50 rounded-xl border border-stone-100">
-                                <span className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-bold shrink-0">{i+1}</span>
-                                <span className="text-xs text-stone-600 leading-relaxed">{step.trim()}</span>
-                              </div>
-                            ))}
+                            {prodResult.prepNotes.split(',').map((step, i) => {
+                              const stepKey = step.trim().toLowerCase().includes('wash leaves') ? 'washLeaves' :
+                                             step.trim().toLowerCase().includes('grind') ? 'grind' :
+                                             step.trim().toLowerCase().includes('extract with water') ? 'extractWater' :
+                                             step.trim().toLowerCase().includes('filter') ? 'filter' :
+                                             step.trim().toLowerCase().includes('heat coagulation') ? 'heatCoagulation' :
+                                             step.trim().toLowerCase().includes('wash and dry') ? 'washDry' : null;
+                              
+                              return (
+                                <div key={i} className="flex items-start gap-3 p-3 bg-stone-50 rounded-xl border border-stone-100">
+                                  <span className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-bold shrink-0">{i+1}</span>
+                                  <span className="text-xs text-stone-600 leading-relaxed">
+                                    {stepKey ? (t.lab as any)[stepKey] : step.trim()}
+                                  </span>
+                                </div>
+                              );
+                            })}
                           </div>
                           <div className="bg-emerald-50 p-6 rounded-2xl border border-emerald-100">
-                            <h4 className="text-sm font-bold text-emerald-900 mb-4">Lab Standards</h4>
+                            <h4 className="text-sm font-bold text-emerald-900 mb-4">{t.lab.labStandards}</h4>
                             <ul className="space-y-2 text-[10px] text-emerald-700">
-                              <li className="flex items-center gap-2"><CheckCircle2 size={12} /> Heat coagulation at 70°C</li>
-                              <li className="flex items-center gap-2"><CheckCircle2 size={12} /> Double filtration</li>
-                              <li className="flex items-center gap-2"><CheckCircle2 size={12} /> Controlled drying</li>
+                              <li className="flex items-center gap-2"><CheckCircle2 size={12} /> {t.lab.heatCoagulation}</li>
+                              <li className="flex items-center gap-2"><CheckCircle2 size={12} /> {t.lab.doubleFiltration}</li>
+                              <li className="flex items-center gap-2"><CheckCircle2 size={12} /> {t.lab.controlledDrying}</li>
                             </ul>
                           </div>
                         </div>
@@ -655,11 +690,11 @@ export default function App() {
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                           <div className="flex items-center gap-2">
                             <Droplets className="text-emerald-600" size={20} />
-                            <h2 className="text-lg font-semibold">Amino Acid Profile Optimization</h2>
+                            <h2 className="text-lg font-semibold">{t.lab.aminoAcidOptimization}</h2>
                           </div>
                           <div className="flex items-center bg-stone-100 p-1 rounded-xl">
-                            <button onClick={() => setProdViewMode('chart')} className={cn("px-4 py-2 rounded-lg text-xs font-bold", prodViewMode === 'chart' ? "bg-white text-emerald-600 shadow-sm" : "text-stone-400")}>Chart</button>
-                            <button onClick={() => setProdViewMode('table')} className={cn("px-4 py-2 rounded-lg text-xs font-bold", prodViewMode === 'table' ? "bg-white text-emerald-600 shadow-sm" : "text-stone-400")}>Table</button>
+                            <button onClick={() => setProdViewMode('chart')} className={cn("px-4 py-2 rounded-lg text-xs font-bold", prodViewMode === 'chart' ? "bg-white text-emerald-600 shadow-sm" : "text-stone-400")}>{t.lab.chart}</button>
+                            <button onClick={() => setProdViewMode('table')} className={cn("px-4 py-2 rounded-lg text-xs font-bold", prodViewMode === 'table' ? "bg-white text-emerald-600 shadow-sm" : "text-stone-400")}>{t.lab.table}</button>
                           </div>
                         </div>
                         <AnimatePresence mode="wait">
@@ -669,8 +704,8 @@ export default function App() {
                                 <RadarChart cx="50%" cy="50%" outerRadius="80%" data={aaData}>
                                   <PolarGrid stroke="#e5e7eb" />
                                   <PolarAngleAxis dataKey="name" tick={{ fontSize: 10, fontWeight: 600, fill: '#9ca3af' }} />
-                                  <Radar name="Optimized Mix" dataKey="optimized" stroke="#10b981" fill="#10b981" fillOpacity={0.3} />
-                                  <Radar name="FAO Standard" dataKey="fao" stroke="#3b82f6" fill="none" strokeDasharray="4 4" />
+                                  <Radar name={t.lab.optimizedMix} dataKey="optimized" stroke="#10b981" fill="#10b981" fillOpacity={0.3} />
+                                  <Radar name={t.lab.faoStandard} dataKey="fao" stroke="#3b82f6" fill="none" strokeDasharray="4 4" />
                                   <Tooltip />
                                 </RadarChart>
                               </ResponsiveContainer>
@@ -680,16 +715,16 @@ export default function App() {
                               <table className="w-full text-left text-xs">
                                 <thead>
                                   <tr className="border-b border-stone-100">
-                                    <th className="py-4 font-bold text-stone-400 uppercase tracking-widest text-[10px]">Amino Acid</th>
-                                    <th className="py-4 font-bold text-stone-400 uppercase tracking-widest text-[10px]">FAO Std</th>
-                                    <th className="py-4 font-bold text-stone-400 uppercase tracking-widest text-[10px]">Blend Val</th>
-                                    <th className="py-4 font-bold text-stone-400 uppercase tracking-widest text-[10px]">Score</th>
+                                    <th className="py-4 font-bold text-stone-400 uppercase tracking-widest text-[10px]">{t.lab.aminoAcid}</th>
+                                    <th className="py-4 font-bold text-stone-400 uppercase tracking-widest text-[10px]">{t.lab.faoStd}</th>
+                                    <th className="py-4 font-bold text-stone-400 uppercase tracking-widest text-[10px]">{t.lab.blendVal}</th>
+                                    <th className="py-4 font-bold text-stone-400 uppercase tracking-widest text-[10px]">{t.lab.score}</th>
                                   </tr>
                                 </thead>
                                 <tbody className="divide-y divide-stone-50">
                                   {prodResult.blendAnalysis.aminoAcids.map((aa, i) => (
                                     <tr key={i} className="hover:bg-stone-50/50 transition-colors">
-                                      <td className="py-4 font-semibold text-stone-900">{aa.name}</td>
+                                      <td className="py-4 font-semibold text-stone-900">{(t.aminoAcids as any)[aa.key] || aa.name}</td>
                                       <td className="py-4 text-stone-500">{aa.fao.toFixed(2)}</td>
                                       <td className="py-4 font-bold text-emerald-600">{aa.blend.toFixed(2)}</td>
                                       <td className="py-4">
@@ -716,18 +751,19 @@ export default function App() {
                           <div className="flex items-center gap-3 mb-8">
                             <div className="w-10 h-10 bg-emerald-500/20 text-emerald-400 rounded-xl flex items-center justify-center"><Recycle size={20} /></div>
                             <div>
-                              <h2 className="text-xl font-display font-bold">Circular Economy & Soil Recovery</h2>
-                              <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-[0.2em]">الاقتصاد الدائري واستعادة التربة</p>
+                              <h2 className="text-xl font-display font-bold">{t.lab.circularEconomy}</h2>
                             </div>
                           </div>
                           <div className="space-y-6 relative z-10">
                             <div className="p-6 bg-white/5 rounded-2xl border border-white/10 flex justify-between items-center group hover:bg-white/10 transition-colors">
-                              <span className="text-xs text-stone-400 font-bold uppercase tracking-widest">Soil Enhancer Produced</span>
+                              <span className="text-xs text-stone-400 font-bold uppercase tracking-widest">{t.lab.soilEnhancer}</span>
                               <span className="text-2xl font-display font-bold text-emerald-400">{prodResult.soilEnhancerKg.toFixed(3)} kg</span>
                             </div>
                             <div className="text-xs text-stone-300 space-y-3 leading-relaxed">
-                              <p className="font-bold text-emerald-400 uppercase tracking-widest text-[10px]">Deep Method: {prodResult.soilMethod}</p>
-                              <p className="opacity-80">The non-protein biomass (fibers and minerals) undergoes a controlled anaerobic fermentation process. This breaks down complex lignocellulose into bio-available nutrients, creating a high-carbon soil amendment that regenerates depleted agricultural land.</p>
+                              <p className="font-bold text-emerald-400 uppercase tracking-widest text-[10px]">{t.lab.deepMethod}: {t.lab.anaerobicDecomposition}</p>
+                              <p className="opacity-80">
+                                {t.lab.circularEconomyDesc}
+                              </p>
                             </div>
                           </div>
                         </section>
@@ -735,20 +771,27 @@ export default function App() {
                         <section className="bg-white p-10 rounded-[2.5rem] border border-stone-200/60 shadow-xl shadow-stone-200/20">
                           <div className="flex items-center gap-3 mb-8">
                             <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center"><Globe size={20} /></div>
-                            <h2 className="text-xl font-display font-bold text-stone-900">Ecological Benefits</h2>
+                            <h2 className="text-xl font-display font-bold text-stone-900">{t.lab.ecologicalBenefits}</h2>
                           </div>
                           <div className="flex flex-wrap gap-3">
-                            {prodResult.soilBenefits.map((benefit, i) => (
-                              <motion.div 
-                                key={i} 
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ delay: i * 0.1 }}
-                                className="px-4 py-3 bg-stone-50 rounded-2xl border border-stone-100 text-xs text-stone-600 font-medium flex items-center gap-3 hover:bg-emerald-50 hover:border-emerald-100 transition-all cursor-default"
-                              >
-                                <CheckCircle2 size={14} className="text-emerald-500" /> {benefit}
-                              </motion.div>
-                            ))}
+                            {prodResult.soilBenefits.map((benefit, i) => {
+                              const benefitKey = benefit.toLowerCase().includes('water retention') ? 'waterRetention' :
+                                                benefit.toLowerCase().includes('microbial activity') ? 'microbialActivity' :
+                                                benefit.toLowerCase().includes('organic matter') ? 'organicMatter' :
+                                                benefit.toLowerCase().includes('chemical fertilizer') ? 'chemicalDependency' : null;
+                              
+                              return (
+                                <motion.div 
+                                  key={i} 
+                                  initial={{ opacity: 0, scale: 0.9 }}
+                                  animate={{ opacity: 1, scale: 1 }}
+                                  transition={{ delay: i * 0.1 }}
+                                  className="px-4 py-3 bg-stone-50 rounded-2xl border border-stone-100 text-xs text-stone-600 font-medium flex items-center gap-3 hover:bg-emerald-50 hover:border-emerald-100 transition-all cursor-default"
+                                >
+                                  <CheckCircle2 size={14} className="text-emerald-500" /> {benefitKey ? (t.lab as any)[benefitKey] : benefit}
+                                </motion.div>
+                              );
+                            })}
                           </div>
                         </section>
                       </div>
@@ -756,8 +799,8 @@ export default function App() {
                   ) : (
                     <div className="h-full min-h-[600px] flex flex-col items-center justify-center text-center p-12 bg-white rounded-3xl border border-stone-200 border-dashed">
                       <FlaskConical size={40} className="text-stone-300 mb-6" />
-                      <h2 className="text-xl font-bold text-stone-900 mb-2">Production Lab Ready</h2>
-                      <p className="text-sm text-stone-500 max-w-sm mx-auto">Select parameters to calculate extraction yield and environmental impact.</p>
+                      <h2 className="text-xl font-bold text-stone-900 mb-2">{t.common.productionLabReady}</h2>
+                      <p className="text-sm text-stone-500 max-w-sm mx-auto">{t.common.selectParams}</p>
                     </div>
                   )}
                 </AnimatePresence>
@@ -771,19 +814,47 @@ export default function App() {
               exit={{ opacity: 0, x: -20 }}
               className="space-y-10"
             >
-              {/* Research Lab Header */}
-              <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+              {/* Research Tab Sub-Navigation */}
+              <div className="flex justify-center">
+                <div className="bg-stone-100 p-1 rounded-2xl border border-stone-200 flex gap-1">
+                  <button 
+                    onClick={() => setResearchViewMode('standard')}
+                    className={cn(
+                      "px-6 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2",
+                      researchViewMode === 'standard' ? "bg-white text-emerald-900 shadow-sm" : "text-stone-400 hover:text-stone-600"
+                    )}
+                  >
+                    <TableIcon size={14} />
+                    {t.lab.table}
+                  </button>
+                  <button 
+                    onClick={() => setResearchViewMode('comparison')}
+                    className={cn(
+                      "px-6 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2",
+                      researchViewMode === 'comparison' ? "bg-white text-emerald-900 shadow-sm" : "text-stone-400 hover:text-stone-600"
+                    )}
+                  >
+                    <Scale size={14} />
+                    {t.comparison.title}
+                  </button>
+                </div>
+              </div>
+
+              {researchViewMode === 'standard' ? (
+                <>
+                  {/* Research Lab Header */}
+                  <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div className="max-w-2xl">
-                  <h2 className="text-4xl font-display font-bold text-stone-900 mb-4 tracking-tight">Amino Acids Analysis</h2>
+                  <h2 className="text-4xl font-display font-bold text-stone-900 mb-4 tracking-tight">{t.common.aminoAcidsAnalysis}</h2>
                   <p className="text-slate-500 text-sm leading-relaxed mb-6">
-                    Analyzing blend completeness against <span className="font-bold text-emerald-900 underline decoration-emerald-200">FAO/WHO 2013 Adult Standards</span>.
+                    {t.common.analyzingBlend} <span className="font-bold text-emerald-900 underline decoration-emerald-200">{t.common.faoWhoStandards}</span>.
                   </p>
                   
                   {/* Custom Ratio Slider */}
                   <div className="bg-white p-6 rounded-2xl border border-stone-200 shadow-sm max-w-md">
                     <div className="flex justify-between items-center mb-4">
-                      <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">Blend Ratio Optimization</label>
-                      <span className="text-xs font-bold text-emerald-600">{(customRatio * 100).toFixed(0)}% Leaf : {((1 - customRatio) * 100).toFixed(0)}% Complement</span>
+                      <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">{t.common.blendRatioOptimization}</label>
+                      <span className="text-xs font-bold text-emerald-600">{(customRatio * 100).toFixed(0)}% {t.common.leaf} : {((1 - customRatio) * 100).toFixed(0)}% {t.common.complement}</span>
                     </div>
                     <input 
                       type="range" 
@@ -795,8 +866,8 @@ export default function App() {
                       className="w-full h-1.5 bg-stone-100 rounded-lg appearance-none cursor-pointer accent-emerald-600"
                     />
                     <div className="flex justify-between mt-2 text-[9px] text-stone-400 font-bold uppercase">
-                      <span>Pure Complement</span>
-                      <span>Pure Leaf</span>
+                      <span>{t.common.pureComplement}</span>
+                      <span>{t.common.pureLeaf}</span>
                     </div>
                   </div>
                 </div>
@@ -805,25 +876,30 @@ export default function App() {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                     <input 
                       type="text"
-                      placeholder="Filter complements..."
+                      placeholder={t.lab.filterComplements}
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-emerald-500"
                     />
                   </div>
-                  <div className="flex bg-stone-100/80 p-1 rounded-xl border border-stone-200/50 backdrop-blur-sm">
-                    {LEAF_SOURCES.map(leaf => (
-                      <button
-                        key={leaf.id}
-                        onClick={() => setSelectedLeafId(leaf.id)}
-                        className={cn(
-                          "px-4 py-2 rounded-lg text-xs font-bold transition-all",
-                          selectedLeafId === leaf.id ? "bg-white text-emerald-900 shadow-sm" : "text-slate-500"
-                        )}
-                      >
-                        {leaf.name}
-                      </button>
-                    ))}
+                      <div className="flex bg-stone-100/50 p-1.5 rounded-2xl border border-stone-200/50 backdrop-blur-sm shadow-inner">
+                        {LEAF_SOURCES.map(leaf => (
+                          <button
+                            key={leaf.id}
+                            onClick={() => setSelectedLeafId(leaf.id)}
+                            className={cn(
+                              "px-6 py-2.5 rounded-xl text-xs font-bold transition-all duration-300",
+                              selectedLeafId === leaf.id 
+                                ? "bg-white text-emerald-900 shadow-md ring-1 ring-stone-200/20" 
+                                : "text-stone-400 hover:text-stone-600 hover:bg-white/50"
+                            )}
+                          >
+                            {language === 'ar' ? leaf.nameAr : 
+                             language === 'fr' ? leaf.nameFr :
+                             language === 'it' ? leaf.nameIt :
+                             leaf.nameEn}
+                          </button>
+                        ))}
                   </div>
                 </div>
               </div>
@@ -843,12 +919,20 @@ export default function App() {
                       <div className="flex items-center gap-5">
                         <div className="w-14 h-14 bg-white border border-stone-200 rounded-[1.25rem] flex items-center justify-center text-emerald-900 shadow-sm"><LayoutDashboard size={28} /></div>
                         <div>
-                          <h3 className="text-xl font-display font-bold text-stone-900">{blend.leaf.name} + {blend.complement.name}</h3>
-                          <p className="text-[10px] font-bold text-stone-400 uppercase tracking-[0.2em]">Scientific Blend Analysis</p>
+                          <h3 className="text-xl font-display font-bold text-stone-900">
+                            {language === 'ar' ? blend.leaf.nameAr : 
+                             language === 'fr' ? blend.leaf.nameFr :
+                             language === 'it' ? blend.leaf.nameIt :
+                             blend.leaf.nameEn} + {language === 'ar' ? blend.complement.nameAr :
+                             language === 'fr' ? blend.complement.nameFr :
+                             language === 'it' ? blend.complement.nameIt :
+                             blend.complement.nameEn}
+                          </h3>
+                          <p className="text-[10px] font-bold text-stone-400 uppercase tracking-[0.2em]">{language === 'ar' ? "تحليل المزيج العلمي" : "Scientific Blend Analysis"}</p>
                         </div>
                       </div>
                       <button onClick={() => exportToPDF(blend)} className="flex items-center gap-2 px-6 py-3 bg-emerald-900 text-white text-xs font-bold rounded-2xl shadow-xl shadow-emerald-900/20 transition-all hover:bg-emerald-950 active:scale-95">
-                        <Download size={14} /> Export Research PDF
+                        <Download size={14} /> {t.lab.exportPdf}
                       </button>
                     </div>
                     <div className="p-8">
@@ -856,17 +940,17 @@ export default function App() {
                         <table className="w-full text-left text-sm">
                           <thead>
                             <tr className="border-b border-stone-100">
-                              <th className="py-4 px-4 font-bold text-stone-400 uppercase tracking-[0.2em] text-[10px]">Amino Acid</th>
-                              <th className="py-4 px-4 font-bold text-stone-400 uppercase tracking-[0.2em] text-[10px]">FAO Std (mg/g)</th>
-                              <th className="py-4 px-4 font-bold text-stone-400 uppercase tracking-[0.2em] text-[10px]">Blend Val (mg/g)</th>
-                              <th className="py-4 px-4 font-bold text-stone-400 uppercase tracking-[0.2em] text-[10px]">Chemical Score</th>
-                              <th className="py-4 px-4 font-bold text-stone-400 uppercase tracking-[0.2em] text-[10px]">Limiting AA</th>
+                              <th className="py-4 px-4 font-bold text-stone-400 uppercase tracking-[0.2em] text-[10px]">{t.lab.aminoAcid}</th>
+                              <th className="py-4 px-4 font-bold text-stone-400 uppercase tracking-[0.2em] text-[10px]">{t.lab.faoStd} (mg/g)</th>
+                              <th className="py-4 px-4 font-bold text-stone-400 uppercase tracking-[0.2em] text-[10px]">{t.lab.blendVal} (mg/g)</th>
+                              <th className="py-4 px-4 font-bold text-stone-400 uppercase tracking-[0.2em] text-[10px]">{t.lab.chemicalScore}</th>
+                              <th className="py-4 px-4 font-bold text-stone-400 uppercase tracking-[0.2em] text-[10px]">{t.economic.limitingAA}</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-stone-50">
                             {blend.aminoAcids.map((aa, i) => (
                               <tr key={i} className="hover:bg-stone-50/50 transition-colors">
-                                <td className="py-4 px-4 font-semibold text-stone-900">{aa.name}</td>
+                                <td className="py-4 px-4 font-semibold text-stone-900">{(t.aminoAcids as any)[aa.key] || aa.name}</td>
                                 <td className="py-4 px-4 text-stone-500 font-mono">{aa.fao.toFixed(2)}</td>
                                 <td className="py-4 px-4 text-stone-700 font-mono font-bold">{aa.blend.toFixed(2)}</td>
                                 <td className="py-4 px-4">
@@ -875,8 +959,8 @@ export default function App() {
                                   </span>
                                 </td>
                                 <td className="py-4 px-4">
-                                  {aa.isLimiting && <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-rose-50 text-rose-600 rounded-full text-[10px] font-bold border border-rose-100 uppercase tracking-widest"><AlertCircle size={10} /> Limiting</span>}
-                                  {!aa.isLimiting && aa.score >= 100 && <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-bold border border-emerald-100 uppercase tracking-widest"><CheckCircle2 size={10} /> Optimal</span>}
+                                  {aa.isLimiting && <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-rose-50 text-rose-600 rounded-full text-[10px] font-bold border border-rose-100 uppercase tracking-widest"><AlertCircle size={10} /> {t.common.limiting}</span>}
+                                  {!aa.isLimiting && aa.score >= 100 && <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-bold border border-emerald-100 uppercase tracking-widest"><CheckCircle2 size={10} /> {t.common.optimal}</span>}
                                 </td>
                               </tr>
                             ))}
@@ -886,17 +970,21 @@ export default function App() {
                       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
                         <div className="lg:col-span-2 p-8 bg-stone-50 rounded-[2rem] border border-stone-100 relative overflow-hidden group">
                           <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-50 rounded-full -mr-12 -mt-12 group-hover:scale-110 transition-transform" />
-                          <h4 className="text-sm font-display font-bold text-stone-900 mb-6 flex items-center gap-2 relative z-10"><FileText size={18} className="text-emerald-600" /> Scientific Interpretation</h4>
-                          <p className="text-sm text-stone-600 italic leading-relaxed relative z-10">"{blend.interpretation}"</p>
+                          <h4 className="text-sm font-display font-bold text-stone-900 mb-6 flex items-center gap-2 relative z-10"><FileText size={18} className="text-emerald-600" /> {t.lab.scientificInterpretation}</h4>
+                          <p className="text-sm text-stone-600 italic leading-relaxed relative z-10">
+                            {blend.chemicalScore >= 100 
+                              ? t.lab.completeProfile 
+                              : t.lab.limitedBy.replace('{aa}', (t.aminoAcids as any)[blend.limitingAA.toLowerCase()] || blend.limitingAA)}
+                          </p>
                         </div>
                         <div className="space-y-4">
                           <div className="p-6 bg-white border border-stone-200/60 rounded-[2rem] shadow-xl shadow-stone-200/10 relative overflow-hidden group">
                             <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
                               <TrendingUp size={60} />
                             </div>
-                            <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest block mb-2">Protein Efficiency</span>
+                            <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest block mb-2">{t.lab.proteinEfficiency}</span>
                             <div className="flex justify-between items-end mb-4">
-                              <span className="text-xs font-bold text-stone-500">Chemical Score</span>
+                              <span className="text-xs font-bold text-stone-500">{t.lab.chemicalScore}</span>
                               <span className="text-2xl font-display font-bold text-emerald-600">{blend.chemicalScore.toFixed(1)}%</span>
                             </div>
                             <div className="w-full bg-stone-100 h-1.5 rounded-full overflow-hidden">
@@ -931,8 +1019,12 @@ export default function App() {
                   </motion.section>
                 ))}
               </div>
-            </motion.div>
-          ) : activeTab === 'economic' ? (
+            </>
+          ) : (
+            <AminoAcidComparison language={language} translations={t} />
+          )}
+        </motion.div>
+      ) : activeTab === 'economic' ? (
             <motion.div 
               key="economic"
               initial={{ opacity: 0, y: 20 }}
@@ -940,6 +1032,25 @@ export default function App() {
               exit={{ opacity: 0, y: -20 }}
             >
               <EconomicAnalysis language={language} t={t} />
+            </motion.div>
+          ) : activeTab === 'ai-assistant' ? (
+            <motion.div 
+              key="ai-assistant"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              <ChatAssistant 
+                language={language} 
+                t={t} 
+                contextData={{
+                  leafType: LEAF_TYPES.find(l => l.id === leafId),
+                  quantity,
+                  productionResults: prodResult,
+                  availableBlends: allBlends,
+                  customRatio
+                }} 
+              />
             </motion.div>
           ) : (
             <motion.div 

@@ -24,18 +24,24 @@ export const FAO_2013_ADULT_STANDARD: AminoAcids = {
 
 export interface ProteinSource {
   id: string;
-  name: string;
+  nameEn: string;
   nameAr?: string;
+  nameFr?: string;
+  nameIt?: string;
   aminoAcids: AminoAcids;
-  costPer100g: number;
+  costPer100g: number; // Legacy, keep for compatibility if needed
+  pricePerKg: number;
 }
 
 export const LEAF_SOURCES: ProteinSource[] = [
   {
     id: "sycamore",
-    name: "Sycamore Fig",
+    nameEn: "Sycamore Fig",
     nameAr: "جميز",
+    nameFr: "Figuier Sycomore",
+    nameIt: "Fico Sicomoro",
     costPer100g: 0,
+    pricePerKg: 0,
     aminoAcids: {
       histidine: 18.2, 
       isoleucine: 43.5, 
@@ -50,9 +56,12 @@ export const LEAF_SOURCES: ProteinSource[] = [
   },
   {
     id: "fig",
-    name: "Fig Leaves",
+    nameEn: "Fig Leaves",
     nameAr: "تين",
+    nameFr: "Feuilles de Figuier",
+    nameIt: "Foglie di Fico",
     costPer100g: 0,
+    pricePerKg: 0,
     aminoAcids: {
       histidine: 16.5, isoleucine: 30.2, leucine: 58.4, lysine: 35.2,
       saa: 12.8, aaa: 39.5, threonine: 26.2, tryptophan: 7.5, valine: 38.4
@@ -60,9 +69,12 @@ export const LEAF_SOURCES: ProteinSource[] = [
   },
   {
     id: "mulberry",
-    name: "Mulberry Leaves",
+    nameEn: "Mulberry Leaves",
     nameAr: "توت",
+    nameFr: "Feuilles de Mûrier",
+    nameIt: "Foglie di Gelso",
     costPer100g: 0,
+    pricePerKg: 0,
     aminoAcids: {
       histidine: 19.4, isoleucine: 34.2, leucine: 65.2, lysine: 42.1,
       saa: 16.2, aaa: 45.4, threonine: 30.1, tryptophan: 9.1, valine: 44.5
@@ -73,11 +85,12 @@ export const LEAF_SOURCES: ProteinSource[] = [
 export const COMPLEMENTARY_SOURCES: ProteinSource[] = [
   {
     id: "chickpea",
-    name: "Chickpea",
+    nameEn: "Chickpea",
     nameAr: "حمص",
     nameFr: "Pois chiche",
     nameIt: "Ceci",
     costPer100g: 4.5,
+    pricePerKg: 55,
     aminoAcids: {
       histidine: 26.5, isoleucine: 41.2, leucine: 71.4, lysine: 65.2,
       saa: 24.5, aaa: 78.2, threonine: 35.4, tryptophan: 8.5, valine: 42.1
@@ -85,11 +98,12 @@ export const COMPLEMENTARY_SOURCES: ProteinSource[] = [
   },
   {
     id: "lentil",
-    name: "Lentil",
+    nameEn: "Lentil",
     nameAr: "عدس",
     nameFr: "Lentille",
     nameIt: "Lenticchia",
     costPer100g: 4.5, // 13.5 / 3
+    pricePerKg: 45,
     aminoAcids: {
       histidine: 28.4, 
       isoleucine: 54.0, 
@@ -104,11 +118,12 @@ export const COMPLEMENTARY_SOURCES: ProteinSource[] = [
   },
   {
     id: "soy",
-    name: "Soy",
+    nameEn: "Soy",
     nameAr: "صويا",
     nameFr: "Soja",
     nameIt: "Soia",
     costPer100g: 5.5,
+    pricePerKg: 70,
     aminoAcids: {
       histidine: 25.8, isoleucine: 48.2, leucine: 82.1, lysine: 63.4,
       saa: 26.2, aaa: 80.4, threonine: 38.5, tryptophan: 12.4, valine: 48.2
@@ -116,11 +131,12 @@ export const COMPLEMENTARY_SOURCES: ProteinSource[] = [
   },
   {
     id: "fava",
-    name: "Fava Bean",
+    nameEn: "Fava Bean",
     nameAr: "فول",
     nameFr: "Fève",
     nameIt: "Fava",
     costPer100g: 4.0,
+    pricePerKg: 60,
     aminoAcids: {
       histidine: 24.2, isoleucine: 38.5, leucine: 70.2, lysine: 62.1,
       saa: 15.4, aaa: 75.2, threonine: 32.1, tryptophan: 7.8, valine: 40.2
@@ -128,11 +144,12 @@ export const COMPLEMENTARY_SOURCES: ProteinSource[] = [
   },
   {
     id: "lupin",
-    name: "Lupin",
+    nameEn: "Lupin",
     nameAr: "ترمس",
     nameFr: "Lupin",
     nameIt: "Lupino",
     costPer100g: 4.2,
+    pricePerKg: 55,
     aminoAcids: {
       histidine: 26.1, isoleucine: 40.2, leucine: 72.5, lysine: 58.4,
       saa: 28.4, aaa: 79.1, threonine: 34.2, tryptophan: 10.2, valine: 41.5
@@ -160,6 +177,8 @@ export interface LeafType {
   id: string;
   nameAr: string;
   nameEn: string;
+  nameFr: string;
+  nameIt: string;
   edible: boolean;
   leafSeason: string;
   leafWeightG: number;
@@ -188,6 +207,7 @@ export interface CalculationResult {
   originalAminoAcids: AminoAcids;
   optimizedAminoAcids: AminoAcids;
   totalCost: number;
+  costPer100gNetProtein: number;
   wasteReductionKg: number;
   soilEnhancerKg: number;
   dailyIntakeGrams: number;
@@ -201,6 +221,13 @@ export interface CalculationResult {
   finalProteinPercent: number;
   maxDailyConcentrateG: number;
   blendAnalysis: BlendAnalysis;
+  debug?: {
+    leafCost: number;
+    legumeCost: number;
+    totalRawMaterialCost: number;
+    netPureProteinOutput: number;
+    formula: string;
+  };
 }
 
 export const LEAF_TYPES: LeafType[] = [
@@ -208,6 +235,8 @@ export const LEAF_TYPES: LeafType[] = [
     id: "sycamore",
     nameAr: "ورق الجميز",
     nameEn: "Sycamore fig",
+    nameFr: "Figuier sycomore",
+    nameIt: "Fico sicomoro",
     edible: true,
     leafSeason: "Autumn",
     leafWeightG: 1750,
@@ -302,6 +331,8 @@ export const LEAF_TYPES: LeafType[] = [
     id: "fig",
     nameAr: "ورق التين",
     nameEn: "Fig leaves",
+    nameFr: "Feuilles de figuier",
+    nameIt: "Foglie di fico",
     edible: true,
     leafSeason: "Autumn",
     leafWeightG: 1500,
@@ -396,6 +427,8 @@ export const LEAF_TYPES: LeafType[] = [
     id: "mulberry",
     nameAr: "ورق التوت",
     nameEn: "Mulberry leaves",
+    nameFr: "Feuilles de mûrier",
+    nameIt: "Foglie di gelso",
     edible: true,
     leafSeason: "Autumn",
     leafWeightG: 1600,
@@ -504,4 +537,5 @@ export interface BlendAnalysis {
   pdcaas: number;
   completeness: "Low" | "Moderate" | "High";
   interpretation: string;
+  interpretationKey: 'completeProfile' | 'limitedBy';
 }

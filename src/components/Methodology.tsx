@@ -123,7 +123,7 @@ export const Methodology = ({ language, t }: MethodologyProps) => {
       {/* Header Section */}
       <div className="text-center space-y-4">
         <h2 className="text-3xl font-display font-bold text-stone-900">{t.methodology.title}</h2>
-        <p className="text-emerald-700 font-bold uppercase tracking-widest text-[10px]">{language === 'ar' ? 'منهجية البحث العلمي' : language === 'it' ? 'Metodologia della ricerca scientifica' : language === 'fr' ? 'Méthodologie de recherche scientifique' : 'Scientific Research Methodology'}</p>
+        <p className="text-emerald-700 font-bold uppercase tracking-widest text-[10px]">{t.methodology.scientificMethodology}</p>
         <div className="max-w-2xl mx-auto text-sm text-stone-500 leading-relaxed">
           {t.methodology.subtitle}
         </div>
@@ -137,7 +137,7 @@ export const Methodology = ({ language, t }: MethodologyProps) => {
           </div>
           <div>
             <h3 className="text-xl font-bold text-stone-900">{t.methodology.trackA}</h3>
-            <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">{language === 'ar' ? 'المسار أ: استخلاص بروتين الأوراق' : language === 'it' ? 'Binario A: Estrazione proteine fogliari' : language === 'fr' ? 'Voie A : Extraction de protéines de feuilles' : 'Track A: Leaf Protein Extraction'}</p>
+            <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">{t.methodology.trackALabel}</p>
           </div>
         </div>
 
@@ -151,7 +151,7 @@ export const Methodology = ({ language, t }: MethodologyProps) => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.1 }}
-                className="bg-white p-6 rounded-[2rem] border border-stone-200/60 shadow-sm hover:shadow-md transition-all group relative"
+                className="glass-card p-6 rounded-[2rem] border border-stone-200/60 shadow-sm hover:shadow-emerald-900/5 transition-all duration-500 group relative"
               >
                 <div className="absolute -top-3 -left-3 w-8 h-8 bg-stone-900 text-white rounded-full flex items-center justify-center text-xs font-bold z-10">
                   {index + 1}
@@ -175,7 +175,7 @@ export const Methodology = ({ language, t }: MethodologyProps) => {
           </div>
           <div>
             <h3 className="text-xl font-bold text-stone-900">{t.methodology.trackB}</h3>
-            <p className="text-[10px] font-bold text-amber-600 uppercase tracking-widest">{language === 'ar' ? 'المسار ب: مركز بروتين البقوليات' : language === 'it' ? 'Binario B: Concentrato proteico di legumi' : language === 'fr' ? 'Voie B : Concentré de protéines de légumineuses' : 'Track B: Legume Protein Concentrate'}</p>
+            <p className="text-[10px] font-bold text-amber-600 uppercase tracking-widest">{t.methodology.trackBLabel}</p>
           </div>
         </div>
 
@@ -189,7 +189,7 @@ export const Methodology = ({ language, t }: MethodologyProps) => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.1 }}
-                className="bg-white p-6 rounded-[2rem] border border-stone-200/60 shadow-sm hover:shadow-md transition-all group relative"
+                className="glass-card p-6 rounded-[2rem] border border-stone-200/60 shadow-sm hover:shadow-amber-900/5 transition-all duration-500 group relative"
               >
                 <div className="absolute -top-3 -left-3 w-8 h-8 bg-amber-900 text-white rounded-full flex items-center justify-center text-xs font-bold z-10">
                   {index + 1}
@@ -235,15 +235,15 @@ export const Methodology = ({ language, t }: MethodologyProps) => {
               <div className="text-[10px] text-stone-500 uppercase font-bold tracking-widest">{t.methodology.natural}</div>
             </div>
             <div className="p-6 bg-white/5 rounded-2xl border border-white/10 text-center">
-              <div className="text-2xl font-display font-bold text-emerald-400 mb-1">Zero</div>
+              <div className="text-2xl font-display font-bold text-emerald-400 mb-1">{t.methodology.zero}</div>
               <div className="text-[10px] text-stone-500 uppercase font-bold tracking-widest">{t.methodology.noChemicals}</div>
             </div>
             <div className="p-6 bg-white/5 rounded-2xl border border-white/10 text-center">
-              <div className="text-2xl font-display font-bold text-emerald-400 mb-1">45 Days</div>
+              <div className="text-2xl font-display font-bold text-emerald-400 mb-1">{t.methodology.days45}</div>
               <div className="text-[10px] text-stone-500 uppercase font-bold tracking-widest">{t.methodology.wasteRecovery}</div>
             </div>
             <div className="p-6 bg-white/5 rounded-2xl border border-white/10 text-center">
-              <div className="text-2xl font-display font-bold text-emerald-400 mb-1">FAO</div>
+              <div className="text-2xl font-display font-bold text-emerald-400 mb-1">{t.methodology.fao}</div>
               <div className="text-[10px] text-stone-500 uppercase font-bold tracking-widest">{t.methodology.compliant}</div>
             </div>
           </div>
